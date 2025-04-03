@@ -42,3 +42,4 @@ res.aov <- aov(umidade ~ local, data = consolidado)
 # Summary of the analysis
 summary(res.aov)
 TukeyHSD(res.aov)
+boxplot(umidade ~ altura, data=consolidado, xlab="Altura", ylab="Umidade Relativa %", outline=FALSE)
