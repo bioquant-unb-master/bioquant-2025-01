@@ -44,5 +44,6 @@ leveneTest(consolidado$umidade, group=consolidado$local)
 res.aov <- aov(umidade ~ local, data = consolidado)
 # Summary of the analysis
 summary(res.aov)
+shapiro.test(res.aov$residuals)
 TukeyHSD(res.aov)
 boxplot(umidade ~ altura, data=consolidado, xlab="Altura", ylab="Umidade Relativa %", outline=FALSE)
