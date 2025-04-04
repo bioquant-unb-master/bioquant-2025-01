@@ -1,0 +1,159 @@
+---
+title: "Tutorial para Análise de Variância (ANOVA) no R"
+author: "Laura Veras Araújo"
+date: "11/02/2025"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+### [**A ANÁLISE DE VARIÂNCIA (ANOVA) É UM TESTE ESTATÍSTICO USADO PARA COMPARAR TRÊS OU MAIS GRUPOS E VERIFICAR SE SÃO DIFERENTES ESTATISTICAMENTE. ESSE TUTORIAL VISA AUXILIAR NO PASSO A PASSO DOS COMANDOS NECESSÁRIOS PARA REALIZAR ESSE TESTE, BEM COMO NA INTERPRETAÇÃO DOS DADOS OBTIDOS POR MEIO DELE. ESPERO QUE GOSTE! :)**]{.underline}
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(include = FALSE)
+```
+
+#### VAMOS COMEÇAR INSTALANDO E CARREGANDO OS PACOTES NECESSÁRIOS PARA O TUTORIAL
+
+```{r install-packages, eval=FALSE}
+install.packages("ggplot2")
+install.packages("dplyr")
+install.packages("car")
+install.packages("MASS")
+```
+
+```{r load-libraries}
+library(ggplot2)
+library(dplyr)
+library(car)
+library(MASS)
+```
+
+#### PARA ESSE TUTORIAL, SERÁ CRIADO UM CONJUNTO FIXO DE DADOS HIPOTÉTICOS SOBRE O COMPRIMENTO DE TRÊS ESPÉCIES DE BESOUROS, ESPÉCIES "A", "B" E "C"
+
+```{r generate-data}
+set.seed(123)
+dados_besouros <- data.frame(
+  Especie = rep(c("Besouro A", "Besouro B", "Besouro C"), each = 10),
+  Comprimento = c(rnorm(10, mean = 5, sd = 0.5),
+                  rnorm(10, mean = 7, sd = 0.6),
+                  rnorm(10, mean = 6, sd = 0.7))
+)
+head(dados_besouros)
+```
+
+#### VAMOS PLOTAR UM GRÁFICO EM BOXPLOT PARA VERIFICAR VISUALMENTE A DISTRIBUIÇÃO DOS DADOS
+
+```{r boxplot-besouros}
+ggplot(dados_besouros, aes(x = Especie, y = Comprimento)) +
+  geom_boxplot() +
+  theme_minimal()
+```
+
+#### PARA PODER RODAR A ANOVA, É PRECISO ATENDER ALGUNS PRÉ-REQUISITOS. O PRIMEIRO DELES É VERIFICAR SE OS DADOS ESTÃO DISTRIBUÍDOS NORMALMENTE, E ISSO SERÁ CONFERIDO POR MEIO DO TESTE SHAPIRO-WILK
+
+-   *SE O "P-VALUE" TIVER VALOR SUPERIOR A 0,05, OS DADOS SÃO CONSIDERADOS NORMAIS*
+
+```{r shapiro-test}
+shapiro.test(dados_besouros$Comprimento[dados_besouros$Especie == "Besouro A"]) # p-value = 0.389 -> a distribuição é normal
+shapiro.test(dados_besouros$Comprimento[dados_besouros$Especie == "Besouro B"]) # p-value = 0.7018 -> a distribuição é normal
+shapiro.test(dados_besouros$Comprimento[dados_besouros$Especie == "Besouro C"]) # p-value = 0.5137 -> a distribuição é normal
+```
+
+#### TAMBÉM É NECESSÁRIO UM TESTE PARA VERIFICAR A HOMOGENEIDADE DA VARIÂNCIA, E NESSE CASO, SERÁ UTILIZADO O TESTE LEVENE PARA VERIFICÁ-LA
+
+-   *UM VALOR DE "Pr(\>F)" SUPERIOR A 0,05 SUGERE QUE AS VARIÂNCIAS SÃO SEMELHANTES*
+
+```{r levene-test}
+leveneTest(Comprimento ~ Especie, data = dados_besouros) # Pr(>F) = 0.746 -> a é variância homogênea
+```
+
+#### APÓS VERIFICAR QUE OS REQUISITOS FORAM ATENDIDOS, É POSSÍVEL RODAR A ANOVA
+
+-   *SE O VALOR DE "PR(\>F)" FOR INFERIOR A 0,05, É POSSÍVEL CONCLUIR QUE HÁ DIFERENÇA SIGNIFICATIVA DOS DADOS DE PELO MENOS UMA DAS ESPÉCIES*
+
+```{r anova-test}
+modelo <- aov(Comprimento ~ Especie, data = dados_besouros) # Pr(>F) = 5.92e-08 -> existe diferença estatística no tamanho de ao menos uma espécie
+summary(modelo)
+```
+
+#### POR FIM, PELO TESTE TUKEY, PODEMOS IDENTIFICAR QUAIS SÃO AS ESPÉCIES QUE DIFEREM SIGNIFICATIVAMENTE ENTRE SI
+
+-   *UM VALOR DE "P ADJ" INFERIOR A 0,05 SUGERE QUE A DIFERENÇA ENTRE AS DUAS ESPÉCIES É SIGNIFICATIVA*
+
+```{r tukey-test}
+TukeyHSD(modelo) # A e B = 0.0000000, A e C = 0.0450602, B e C = 0.0000301 -> todas as espécies diferem significativamente em tamanho entre si 
+plot(TukeyHSD(modelo))
+```
+
+#### INTERPRETANDO OS DADOS, PODEMOS CHEGAR ÀS SEGUINTES CONCLUSÕES:
+
+1)  OS DADOS DAS TRÊS ESPÉCIES ESTÃO DISTRIBUÍDOS NORMALMENTE;
+2)  AS VARIÂNCIAS ENTRE AS ESPÉCIES SÃO SEMELHANTES;
+3)  TODAS AS ESPÉCIES DE BESOURO POSSUEM DIFERENÇAS DE TAMANHO SIGNIFICATIVAS ENTRE SI.
+
+### [**VIU COMO É SIMPLES? AGORA VAMOS PRATICAR! ESSA PRÁTICA TEM COMO TEMA O COMPRIMENTO DO CASCO DE DUAS ESPÉCIES DE CARANGUEJO, TANTO DE MACHOS QUANTO DE FÊMEAS. RODE OS COMANDOS E INTERPRETE OS RESULTADOS :)**]{.underline}
+
+#### ALÉM DOS PACOTES ANTERIORES, ESTE PACOTE TAMBÉM SERÁ NECESSÁRIO PARA A PRÁTICA, PORTANTO, CERTIFIQUE-SE DE QUE ELE ESTÁ CARREGADO
+
+```{r load-crabs}
+data(crabs)
+head(crabs)
+summary(crabs)
+str(crabs)
+```
+
+#### É PRECISO TRANSFORMAR AS VARIÁVEIS CATEGÓRICAS EM FATORES PARA GARANTIR O FUNCIONAMENTO DA ANOVA
+
+```{r factorize-variables}
+crabs$sp <- as.factor(crabs$sp) # espécies -> B = azul, O = laranja
+crabs$sex <- as.factor(crabs$sex) # sexo -> M = macho, F = fêmea
+```
+
+#### BOXPLOT PARA VISUALIZAR A DISTRIBUIÇÃO DOS DADOS
+
+```{r boxplot-crabs}
+ggplot(crabs, aes(x = interaction(sp, sex), y = CL, fill = interaction(sp, sex))) +
+  geom_boxplot() +
+  labs(title = "Comprimento do casco (CL) por espécie e sexo",
+       x = "Grupo (espécie e sexo)",
+       y = "Comprimento do casco (mm)") +
+  theme_minimal()
+```
+
+#### TESTE DE NORMALIDADE (SHAPIRO-WILK)
+
+-   *QUAL O RESULTADO DE CADA CATEGORIA? OS DADOS ESTÃO DISTRIBUÍDOS NORMALMENTE?*
+
+```{r shapiro-test-crabs}
+shapiro.test(crabs$CL[crabs$sp == "B" & crabs$sex == "M"]) # macho azul 
+shapiro.test(crabs$CL[crabs$sp == "B" & crabs$sex == "F"]) # fêmea azul
+shapiro.test(crabs$CL[crabs$sp == "O" & crabs$sex == "M"]) # macho laranja
+shapiro.test(crabs$CL[crabs$sp == "O" & crabs$sex == "F"]) # fêmea laranja
+```
+
+#### TESTE DE HOMOGENEIDADE DA VARIÂNCIA (LEVENE)
+
+-   *A VARIÂNCIA É HOMOGÊNEA?*
+
+```{r levene-test-crabs}
+leveneTest(CL ~ sp * sex, data = crabs)
+```
+
+#### ANÁLISE DE VARIÂNCIA (ANOVA)
+
+-   *A ANOVA INDICOU QUE HÁ DIFERENÇA ENTRE ESPÉCIES? E EM RELAÇÃO AO SEXO, HÁ DIFERENÇA?*
+
+```{r anova-crabs}
+anova_model <- aov(CL ~ sp * sex, data = crabs)
+summary(anova_model)
+```
+
+#### TESTE DE TUKEY (CASO NECESSÁRIO)
+
+-   *CASO A ANOVA TENHA INDICADO DIFERENÇAS ESTATÍSTICAS, QUAIS SÃO AS CATEGORIAS QUE DIFEREM ENTRE SI? A DIFERENÇA É MAIOR ENTRE QUAIS INDIVÍDUOS?*
+
+```{r tukey-test-crabs}
+TukeyHSD(anova_model)
+plot(TukeyHSD(anova_model))
+```
