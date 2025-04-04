@@ -5,7 +5,6 @@ consolidado_orig_mod_01_bioquant_v2 <- read_excel("modulo-01/consolidado-orig-mo
                                                                 "text", "text"))
 View(consolidado_orig_mod_01_bioquant_v2)
 
-consolidado= consolidado_orig_mod_01_bioquant_v3
 
 #Vamos fazer a organização e sistematização dos dados
 #Mudar de maiúsculas para minúsculas
@@ -37,6 +36,10 @@ ggplot(consolidado, aes(x=local,y=temperatura, fill = jardim))+ geom_boxplot()
 ggplot(consolidado, aes(x=local,y=umidade, fill = jardim))+ geom_boxplot()
 shapiro.test(consolidado$temperatura)
 shapiro.test(consolidado$umidade)
+library(car)
+leveneTest(consolidado$temperatura, group=consolidado$local)
+leveneTest(consolidado$umidade, group=consolidado$local)
+
 # Compute the analysis of variance
 res.aov <- aov(umidade ~ local, data = consolidado)
 # Summary of the analysis
